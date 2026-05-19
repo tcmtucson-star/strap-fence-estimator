@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Fence Estimator — Strap Steel Fence Co.</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -110,8 +110,9 @@
     flex: 1;
     position: relative;
     background: #2a3520;
+    min-height: 0;
   }
-  #map { width: 100%; height: 100%; }
+  #map { width: 100%; height: 100%; min-height: 300px; }
 
   /* EMPTY STATE */
   #empty-state {
@@ -394,11 +395,80 @@
   }
   #gate-popup-cancel:hover { background: var(--cream); }
 
-  @media (max-width: 600px) {
-    #main { flex-direction: column; }
-    #sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 320px; }
-    #map-wrap { min-height: 300px; }
+  @media (max-width: 640px) {
+    /* Compact header */
+    #header { padding: 8px 12px; }
+    #header-left svg { height: 32px; }
+    #header-tagline { font-size: 12px; }
+    #header-phone { font-size: 13px; }
+
+    /* Search bar stacks */
+    #search-bar { flex-wrap: wrap; padding: 8px 10px; gap: 6px; }
+    #search-bar label { display: none; }
+    #address-input { font-size: 16px; } /* prevents iOS zoom */
+    #search-btn { width: 100%; text-align: center; }
+
+    /* Main goes full height column */
+    #main { flex-direction: column; min-height: 0; flex: 1; }
+
+    /* Map takes most of screen */
+    #map-wrap { flex: 1; min-height: 0; }
+    #map { width: 100%; height: 100%; }
+
+    /* Toolbar smaller, horizontal on mobile */
+    #toolbar {
+      flex-direction: row !important;
+      top: 8px; left: 8px; right: 8px;
+      gap: 4px;
+    }
+    .tool-btn { padding: 7px 10px; font-size: 12px; flex: 1; justify-content: center; }
+    .tool-btn .tool-icon { font-size: 14px; }
+    .tool-divider { display: none; }
+    .tool-btn-small { padding: 6px 8px; font-size: 11px; }
+
+    /* Instructions wrap on mobile */
+    #instructions {
+      white-space: normal;
+      text-align: center;
+      left: 10px; right: 10px;
+      transform: none;
+      bottom: 8px;
+      font-size: 11px;
+    }
+
+    /* Sidebar becomes a bottom drawer */
+    #sidebar {
+      width: 100%;
+      border-left: none;
+      border-top: 2px solid var(--border);
+      flex-direction: column;
+      max-height: 50vh;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    #sidebar-scroll { padding: 10px 12px; }
+    .s-label { margin: 10px 0 6px; font-size: 10px; }
+
+    /* Quote box more compact */
+    #quote-box { padding: 10px 12px; }
+    #cta-btn { padding: 10px; font-size: 15px; }
+
+    /* Gate popup full width on mobile */
+    #gate-popup {
+      left: 10px !important;
+      right: 10px !important;
+      top: auto !important;
+      bottom: 10px !important;
+      min-width: 0;
+      width: auto;
+    }
   }
+
+  /* Make the whole page fill viewport height properly */
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  #main { flex: 1; min-height: 0; }
+  #map-wrap { min-height: 0; }
 </style>
 </head>
 <body>
@@ -691,6 +761,11 @@ function goToLocation(latLng) {
   document.getElementById('instructions').style.display = 'block';
   map.setCenter(latLng);
   map.setZoom(19);
+  // Force map to redraw to fill container (important on mobile)
+  setTimeout(() => {
+    google.maps.event.trigger(map, 'resize');
+    map.setCenter(latLng);
+  }, 100);
   drawingManager.setMap(map);
   setTool('fence');
 }
