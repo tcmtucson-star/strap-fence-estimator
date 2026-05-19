@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fence Estimator — Strap Steel Fence Co.</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --rust: #B8541A;
+    --rust-dark: #8C3E10;
+    --rust-light: #E8703A;
+    --steel: #2C3E50;
+    --steel-light: #3D5166;
+    --cream: #F5F0E8;
+    --cream-dark: #E8E0D0;
+    --text: #1A1A1A;
+    --text-muted: #666;
+    --border: #D0C8B8;
+    --white: #FFFFFF;
+    --green: #27AE60;
+    --green-dark: #1E8449;
+    --shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  #header {
+    background: var(--steel);
+    color: white;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #header-left { display: flex; align-items: center; gap: 14px; }
+  #logo-mark {
+    width: 38px; height: 38px;
+    background: var(--rust);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 16px; color: white;
+    letter-spacing: 0.02em;
+  }
+  #header-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: 0.03em; }
+  #header-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+  #header-phone { font-size: 15px; font-weight: 600; color: var(--rust-light); letter-spacing: 0.02em; }
+  #header-tagline { flex: 1; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 600; color: rgba(255,255,255,0.85); letter-spacing: 0.04em; }
+
+  /* SEARCH BAR */
+  #search-bar {
+    background: var(--white);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  #search-bar label { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  #address-input {
+    flex: 1;
+    padding: 9px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--cream);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  #address-input:focus { border-color: var(--rust); background: white; }
+  #search-btn {
+    padding: 9px 18px;
+    background: var(--rust);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  #search-btn:hover { background: var(--rust-dark); }
+
+  /* MAIN LAYOUT */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 500px;
+  }
+
+  /* MAP */
+  #map-wrap {
+    flex: 1;
+    position: relative;
+    background: #2a3520;
+  }
+  #map { width: 100%; height: 100%; }
+
+  /* EMPTY STATE */
+  #empty-state {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; text-align: center; padding: 40px;
+    background: var(--steel);
+    color: white;
+  }
+  #empty-icon { font-size: 56px; opacity: 0.3; }
+  #empty-state h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
+  #empty-state p { font-size: 14px; color: rgba(255,255,255,0.6); max-width: 280px; line-height: 1.6; }
+
+  /* TOOLBAR */
+  #toolbar {
+    position: absolute;
+    top: 12px; left: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 10;
+  }
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--steel);
+    transition: all 0.15s;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+  }
+  .tool-btn:hover { background: var(--cream); }
+  .tool-btn.active { background: var(--rust); border-color: var(--rust); color: white; }
+  .tool-btn .tool-icon { font-size: 16px; }
+  .tool-divider { height: 1px; background: var(--border); margin: 2px 0; }
+  .tool-btn-small {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    box-shadow: var(--shadow);
+  }
+  .tool-btn-small:hover { background: var(--cream); color: var(--text); }
+
+  /* INSTRUCTIONS */
+  #instructions {
+    position: absolute;
+    bottom: 14px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.72);
+    color: white;
+    font-size: 12px;
+    padding: 7px 16px;
+    border-radius: 20px;
+    pointer-events: none;
+    white-space: nowrap;
+    display: none;
+    backdrop-filter: blur(4px);
+  }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: 260px;
+    background: var(--white);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  #sidebar-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+
+  .s-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 16px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--cream-dark);
+  }
+  .s-label:first-child { margin-top: 0; }
+
+  /* OPTIONS */
+  .opt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--cream-dark);
+  }
+  .opt-row:last-child { border-bottom: none; }
+  .opt-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .opt-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .opt-row select {
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--cream);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+  }
+  .opt-row select:focus { border-color: var(--rust); }
+
+  /* MEASUREMENTS */
+  .meas-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 13px;
+  }
+  .meas-lbl { color: var(--text-muted); }
+  .meas-val { font-weight: 600; color: var(--text); }
+
+  /* SEGMENTS LIST */
+  #seg-list { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .seg-item {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px;
+    padding: 5px 8px;
+    background: var(--cream);
+    border-radius: 3px;
+    border-left: 3px solid var(--rust);
+  }
+  .seg-item.gate-item { border-left-color: var(--green); }
+  .seg-name { color: var(--text); font-weight: 500; }
+  .seg-ft { color: var(--text-muted); }
+  .seg-del {
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    border: none; background: none;
+  }
+  .seg-del:hover { color: #C0392B; }
+
+  #clear-btn {
+    width: 100%; margin-top: 10px;
+    padding: 7px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: none;
+  }
+  #clear-btn:hover { background: var(--cream); color: #C0392B; border-color: #C0392B; }
+
+  /* QUOTE BOX */
+  #quote-box {
+    border-top: 2px solid var(--cream-dark);
+    padding: 16px;
+    background: var(--cream);
+    flex-shrink: 0;
+  }
+  #quote-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  #quote-title { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  #quote-disclaimer { font-size: 10px; color: var(--text-muted); }
+
+  #quote-breakdown { margin-bottom: 10px; }
+  .q-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; color: var(--text-muted); }
+  .q-row.total {
+    border-top: 1px solid var(--border);
+    margin-top: 6px; padding-top: 6px;
+    font-size: 15px; font-weight: 700;
+    color: var(--text);
+  }
+  .q-row.total .q-amt { color: var(--rust); }
+
+  #empty-quote {
+    font-size: 13px; color: var(--text-muted);
+    text-align: center; padding: 8px 0;
+    font-style: italic;
+  }
+
+  #cta-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--rust);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 2px;
+  }
+  #cta-btn:hover { background: var(--rust-dark); }
+  #cta-sub { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+  /* LOADING */
+  #map-loading {
+    position: absolute; inset: 0;
+    background: var(--steel);
+    display: none;
+    align-items: center; justify-content: center;
+    color: white; font-size: 14px; gap: 10px;
+    z-index: 5;
+  }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* GATE POPUP */
+  #gate-popup {
+    display: none;
+    position: absolute;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--border-radius-lg, 8px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    padding: 14px 16px;
+    z-index: 100;
+    min-width: 220px;
+    font-family: 'Barlow', sans-serif;
+  }
+  #gate-popup h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  #gate-popup select {
+    width: 100%; padding: 8px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    background: var(--cream);
+    color: var(--text);
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  #gate-popup-note { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4; }
+  .gate-popup-btns { display: flex; gap: 8px; }
+  #gate-popup-save {
+    flex: 1; padding: 8px;
+    background: var(--green); color: white;
+    border: none; border-radius: 4px;
+    font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  #gate-popup-save:hover { background: var(--green-dark); }
+  #gate-popup-cancel {
+    padding: 8px 12px;
+    background: transparent; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 4px;
+    font-family: 'Barlow', sans-serif; font-size: 13px;
+    cursor: pointer;
+  }
+  #gate-popup-cancel:hover { background: var(--cream); }
+
+  @media (max-width: 600px) {
+    #main { flex-direction: column; }
+    #sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 320px; }
+    #map-wrap { min-height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="header-left">
+    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 792 612" style="height:48px; width:auto; display:block;">
+      <style>.st0{fill:#FFFFFF;stroke:#000000;stroke-miterlimit:10;}.st1{fill:#FFFFFF;stroke:#FFFFFF;stroke-width:3;stroke-miterlimit:10;}</style>
+      <g>
+        <rect x="111.62" y="39.29" class="st0" width="35.57" height="49.32"/><rect x="653.01" y="39.29" class="st0" width="35.57" height="49.32"/><rect x="111.62" y="137.93" class="st0" width="35.57" height="49.32"/><rect x="111.62" y="234.67" class="st0" width="35.57" height="56.91"/><rect x="111.62" y="333.31" class="st0" width="35.57" height="56.91"/><rect x="388.24" y="185.35" class="st0" width="35.57" height="56.91"/><rect x="653.01" y="134.14" class="st0" width="35.57" height="56.91"/><rect x="653.01" y="234.67" class="st0" width="35.57" height="56.91"/><rect x="653.01" y="333.31" class="st0" width="35.57" height="56.91"/><rect x="388.24" y="35.5" class="st0" width="35.57" height="104.33"/><rect x="388.24" y="283.99" class="st0" width="35.57" height="104.33"/><rect x="61.89" y="96.83" class="st0" width="314.17" height="32.87"/><rect x="61.89" y="296" class="st0" width="314.17" height="32.87"/><rect x="433.69" y="296" class="st0" width="314.17" height="32.87"/><rect x="61.89" y="197.37" class="st0" width="314.17" height="32.87"/><rect x="433.69" y="94.3" class="st0" width="314.17" height="32.87"/><rect x="433.69" y="195.15" class="st0" width="314.17" height="32.87"/><rect x="159.04" y="146.15" class="st0" width="482.12" height="32.87"/><rect x="159.04" y="246.69" class="st0" width="482.12" height="32.87"/>
+        <g><path class="st0" d="M38,469.88l19.96-1.2c0.43,3.11,1.31,5.48,2.64,7.11c2.16,2.64,5.25,3.96,9.26,3.96c2.99,0,5.3-0.67,6.92-2.02s2.43-2.91,2.43-4.69c0-1.69-0.77-3.2-2.32-4.53c-1.54-1.33-5.12-2.59-10.74-3.78c-9.2-1.99-15.76-4.62-19.68-7.91c-3.95-3.29-5.93-7.48-5.93-12.58c0-3.35,1.01-6.51,3.03-9.49c2.02-2.98,5.06-5.32,9.12-7.02c4.06-1.7,9.62-2.56,16.69-2.56c8.68,0,15.29,1.55,19.84,4.65c4.55,3.1,7.26,8.02,8.13,14.78l-19.77,1.11c-0.52-2.93-1.63-5.07-3.31-6.4c-1.68-1.33-4.01-2-6.97-2c-2.44,0-4.28,0.5-5.51,1.49s-1.85,2.2-1.85,3.62c0,1.04,0.51,1.97,1.53,2.8c0.99,0.86,3.33,1.66,7.04,2.4c9.17,1.9,15.74,3.82,19.7,5.76c3.97,1.94,6.85,4.35,8.66,7.22c1.81,2.87,2.71,6.09,2.71,9.65c0,4.18-1.2,8.03-3.61,11.56c-2.41,3.53-5.77,6.2-10.1,8.02c-4.32,1.82-9.77,2.73-16.35,2.73c-11.55,0-19.54-2.13-23.99-6.4S38.59,476.46,38,469.88z"/><path class="st0" d="M105.38,426.27h63.77v16.09h-21.4v49.08h-20.98v-49.08h-21.4V426.27z"/><path class="st0" d="M178.92,491.44v-65.17h34.96c6.48,0,11.44,0.53,14.87,1.6c3.43,1.07,6.19,3.05,8.29,5.94c2.1,2.89,3.15,6.41,3.15,10.56c0,3.62-0.8,6.74-2.41,9.36c-1.61,2.62-3.81,4.75-6.63,6.38c-1.79,1.04-4.25,1.9-7.37,2.58c2.5,0.8,4.32,1.6,5.46,2.4c0.77,0.54,1.89,1.68,3.36,3.43c1.47,1.75,2.44,3.1,2.94,4.05l10.16,18.89H222l-11.21-19.92c-1.42-2.58-2.69-4.25-3.8-5.02c-1.51-1.01-3.23-1.51-5.14-1.51h-1.85v26.45H178.92z M199.99,452.67h8.85c0.96,0,2.81-0.3,5.56-0.89c1.39-0.27,2.52-0.95,3.4-2.05c0.88-1.1,1.32-2.36,1.32-3.78c0-2.1-0.69-3.72-2.08-4.85c-1.39-1.13-4-1.69-7.83-1.69h-9.22V452.67z"/><path class="st0" d="M294.15,480.68h-23.82l-3.31,10.76h-21.42l25.52-65.17h22.88l25.51,65.17h-21.97L294.15,480.68z M289.8,466.59l-7.49-23.43l-7.42,23.43H289.8z"/><path class="st0" d="M326.09,426.27h34.87c7.59,0,13.28,1.73,17.07,5.2c3.78,3.47,5.67,8.4,5.67,14.8c0,6.58-2.06,11.72-6.18,15.43c-4.12,3.7-10.41,5.56-18.87,5.56h-11.48v24.18h-21.07V426.27z M347.17,454.05h5.14c4.04,0,6.88-0.67,8.52-2.02c1.64-1.35,2.45-3.07,2.45-5.18c0-2.05-0.71-3.78-2.13-5.2s-4.09-2.13-8.01-2.13h-5.97V454.05z"/><path class="st0" d="M422.65,469.88l19.96-1.2c0.43,3.11,1.31,5.48,2.64,7.11c2.16,2.64,5.25,3.96,9.26,3.96c2.99,0,5.3-0.67,6.92-2.02s2.43-2.91,2.43-4.69c0-1.69-0.77-3.2-2.32-4.53c-1.54-1.33-5.12-2.59-10.74-3.78c-9.2-1.99-15.76-4.62-19.68-7.91c-3.95-3.29-5.93-7.48-5.93-12.58c0-3.35,1.01-6.51,3.03-9.49c2.02-2.98,5.06-5.32,9.12-7.02c4.06-1.7,9.62-2.56,16.69-2.56c8.68,0,15.29,1.55,19.84,4.65c4.55,3.1,7.26,8.02,8.13,14.78l-19.77,1.11c-0.52-2.93-1.63-5.07-3.31-6.4c-1.68-1.33-4.01-2-6.97-2c-2.44,0-4.28,0.5-5.51,1.49c-1.23,0.99-1.85,2.2-1.85,3.62c0,1.04,0.51,1.97,1.53,2.8c0.99,0.86,3.33,1.66,7.04,2.4c9.17,1.9,15.74,3.82,19.7,5.76s6.85,4.35,8.66,7.22c1.81,2.87,2.71,6.09,2.71,9.65c0,4.18-1.2,8.03-3.61,11.56c-2.41,3.53-5.77,6.2-10.1,8.02c-4.32,1.82-9.77,2.73-16.35,2.73c-11.55,0-19.54-2.13-23.99-6.4S423.24,476.46,422.65,469.88z"/><path class="st0" d="M490.03,426.27h63.77v16.09h-21.4v49.08h-20.98v-49.08h-21.4V426.27z"/><path class="st0" d="M563.25,426.27h56.22v13.92h-35.2v10.36h32.65v13.29h-32.65v12.85h36.21v14.76h-57.24V426.27z"/><path class="st0" d="M631.74,426.27h56.22v13.92h-35.2v10.36h32.65v13.29h-32.65v12.85h36.21v14.76h-57.24V426.27z"/><path class="st0" d="M700.28,426.27h20.98v49.13H754v16.05h-53.72V426.27z"/></g>
+        <g><path class="st0" d="M222.34,567.91v-47.52h33.94v8.04h-23.94v11.25H253v8.04h-20.67v20.19H222.34z"/><path class="st0" d="M264.52,567.91v-47.52h36.71v8.04h-26.71v10.53h24.85v8.01h-24.85v12.94h27.66v8.01H264.52z"/><path class="st0" d="M310.75,567.91v-47.52h9.73l20.26,31.74v-31.74h9.29v47.52h-10.03l-19.96-30.99v30.99H310.75z"/><path class="st0" d="M392.26,550.44l9.69,2.95c-1.49,5.19-3.96,9.04-7.41,11.56c-3.46,2.52-7.84,3.78-13.15,3.78c-6.57,0-11.98-2.16-16.21-6.47c-4.23-4.31-6.35-10.2-6.35-17.68c0-7.91,2.13-14.05,6.38-18.43c4.25-4.38,9.85-6.56,16.78-6.56c6.06,0,10.97,1.72,14.76,5.15c2.25,2.03,3.94,4.95,5.07,8.75l-9.89,2.27c-0.59-2.46-1.81-4.41-3.66-5.84c-1.86-1.43-4.11-2.14-6.77-2.14c-3.67,0-6.65,1.27-8.93,3.79c-2.28,2.53-3.43,6.63-3.43,12.29c0,6.01,1.12,10.29,3.38,12.84c2.25,2.55,5.18,3.83,8.78,3.83c2.66,0,4.94-0.81,6.85-2.43C390.06,556.46,391.43,553.91,392.26,550.44z"/><path class="st0" d="M410.53,567.91v-47.52h36.71v8.04h-26.71v10.53h24.85v8.01h-24.85v12.94h27.66v8.01H410.53z"/><path class="st0" d="M507.55,550.44l9.69,2.95c-1.49,5.19-3.96,9.04-7.41,11.56c-3.46,2.52-7.84,3.78-13.15,3.78c-6.57,0-11.98-2.16-16.21-6.47c-4.23-4.31-6.35-10.2-6.35-17.68c0-7.91,2.13-14.05,6.38-18.43c4.25-4.38,9.85-6.56,16.78-6.56c6.06,0,10.98,1.72,14.76,5.15c2.25,2.03,3.94,4.95,5.07,8.75l-9.89,2.27c-0.59-2.46-1.81-4.41-3.66-5.84c-1.86-1.43-4.12-2.14-6.77-2.14c-3.67,0-6.65,1.27-8.93,3.79c-2.28,2.53-3.43,6.63-3.43,12.29c0,6.01,1.12,10.29,3.38,12.84c2.25,2.55,5.18,3.83,8.78,3.83c2.66,0,4.94-0.81,6.86-2.43C505.34,556.46,506.71,553.91,507.55,550.44z"/><path class="st0" d="M523.79,544.44c0-4.84,0.75-8.9,2.26-12.19c1.12-2.42,2.66-4.59,4.61-6.52c1.95-1.92,4.08-3.35,6.4-4.28c3.08-1.25,6.64-1.88,10.67-1.88c7.29,0,13.13,2.17,17.51,6.51c4.38,4.34,6.57,10.38,6.57,18.12c0,7.67-2.17,13.67-6.52,18.01c-4.35,4.33-10.15,6.5-17.42,6.5c-7.36,0-13.22-2.16-17.56-6.47C525.96,557.94,523.79,552,523.79,544.44z M534.09,544.11c0,5.38,1.29,9.46,3.88,12.24c2.59,2.78,5.87,4.17,9.86,4.17c3.98,0,7.25-1.38,9.81-4.13c2.55-2.76,3.83-6.89,3.83-12.4c0-5.45-1.24-9.51-3.73-12.19c-2.49-2.68-5.79-4.02-9.91-4.02c-4.12,0-7.44,1.36-9.96,4.07C535.35,534.56,534.09,538.65,534.09,544.11z"/><path class="st0" d="M579.54,567.91v-9.11h9.49v9.11H579.54z"/></g>
+        <line class="st1" x1="376.19" y1="592.62" x2="445.34" y2="593.5"/>
+      </g>
+    </svg>
+  </div>
+  <div id="header-tagline">Draw your Strap Steel fence for a quick estimate!</div>
+  <div id="header-phone">📞 520-222-8142</div>
+</div>
+
+<div id="search-bar">
+  <label>Your address:</label>
+  <input id="address-input" type="text" placeholder="e.g. 1234 E Speedway Blvd, Tucson, AZ" autocomplete="off" />
+  <button id="search-btn">Load Satellite View</button>
+</div>
+
+<div id="main">
+  <div id="map-wrap">
+    <div id="empty-state">
+      <div id="empty-icon">🛰️</div>
+      <h3>Satellite Estimator</h3>
+      <p>Enter your address above to load a satellite view of your property, then draw your fence lines to get an instant estimate.</p>
+    </div>
+    <div id="map-loading"><div class="spinner"></div> Loading satellite view...</div>
+    <div id="map"></div>
+    <div id="toolbar">
+      <button class="tool-btn active" id="tool-fence"><span class="tool-icon">🔲</span> Draw Fence</button>
+      <button class="tool-btn" id="tool-gate"><span class="tool-icon">🚪</span> Place Gate</button>
+      <div class="tool-divider"></div>
+      <button class="tool-btn-small" id="tool-undo">↩ Undo</button>
+
+    </div>
+    <div id="gate-popup">
+      <h4>🚪 Select gate type</h4>
+      <select id="gate-type-select">
+        <option value="580">Walk gate 3×5 — $580</option>
+        <option value="640">Walk gate 4×6 — $640</option>
+        <option value="0">Vehicle gate — quote required</option>
+      </select>
+      <div id="gate-popup-note" style="display:none;">Vehicle gates vary by width and style. We'll confirm pricing during your site visit.</div>
+      <div class="gate-popup-btns">
+        <button id="gate-popup-save">Add Gate</button>
+        <button id="gate-popup-cancel">Cancel</button>
+      </div>
+    </div>
+    <div id="instructions">Click on the map to start drawing a fence line</div>
+  </div>
+
+  <div id="sidebar">
+    <div id="sidebar-scroll">
+
+      <div class="s-label">Fence options</div>
+      <div class="opt-row">
+        <div><div class="opt-name">Height</div><div class="opt-sub">Standard is 6 ft</div></div>
+        <select id="opt-height">
+          <option value="1">6 ft (standard)</option>
+          <option value="1.17">7 ft (+17%)</option>
+          <option value="1.33">8 ft (+33%)</option>
+        </select>
+      </div>
+
+
+      <div class="s-label">Measurements</div>
+      <div class="meas-row"><span class="meas-lbl">Fence runs</span><span class="meas-val" id="m-runs">0</span></div>
+      <div class="meas-row"><span class="meas-lbl">Total fence</span><span class="meas-val" id="m-fence">0 ft</span></div>
+      <div class="meas-row"><span class="meas-lbl">Gates</span><span class="meas-val" id="m-gates">0</span></div>
+
+      <div id="seg-list"></div>
+      <button id="clear-btn">✕ Clear all drawings</button>
+
+    </div>
+
+    <div id="quote-box">
+      <div id="quote-header">
+        <span id="quote-title">Estimate</span>
+        <span id="quote-disclaimer">±10% ballpark</span>
+      </div>
+      <div id="quote-breakdown">
+        <div id="empty-quote">Draw your fence line to see pricing</div>
+        <div id="q-rows" style="display:none;">
+          <div class="q-row"><span>Fence (<span id="q-ft">0</span> ft × $<span id="q-rate">45</span>/ft)</span><span class="q-amt" id="q-fence-cost">$0</span></div>
+          <div class="q-row" id="q-gate-row" style="display:none;"><span>Gates (<span id="q-gates">0</span>)</span><span class="q-amt" id="q-gate-cost">$0</span></div>
+          <div class="q-row total"><span>Estimated total</span><span class="q-amt" id="q-total">$0</span></div>
+        </div>
+      </div>
+      <button id="cta-btn" onclick="handleCTA()">Request a Free Quote →</button>
+      <div id="cta-sub">We respond within 24 hours · No obligation</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FENCE_PER_FT = 45;
+const GATE_PRICE = 850;
+
+const GATE_TYPES = {
+  '580': { label: 'Walk gate 3×5', price: 580 },
+  '640': { label: 'Walk gate 4×6', price: 640 },
+  '0':   { label: 'Vehicle gate', price: 0, tbd: true }
+};
+
+let map, geocoder, autocomplete, drawingManager;
+let fencePolylines = [];
+let gateMarkers = []; // [{marker, infoMarker, type, price, label}]
+let activeTool = 'fence';
+let pendingGateLatLng = null;
+
+function initMap() {
+  geocoder = new google.maps.Geocoder();
+
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 32.2226, lng: -110.9747 },
+    zoom: 18,
+    mapTypeId: 'satellite',
+    tilt: 0,
+    disableDefaultUI: true,
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+    gestureHandling: 'greedy',
+    clickableIcons: false,
+  });
+
+  drawingManager = new google.maps.drawing.DrawingManager({
+    drawingMode: google.maps.drawing.OverlayType.POLYLINE,
+    drawingControl: false,
+    polylineOptions: {
+      strokeColor: '#E8703A',
+      strokeWeight: 4,
+      strokeOpacity: 0.95,
+      geodesic: true,
+      clickable: false,
+      editable: false,
+    }
+  });
+
+  drawingManager.addListener('polylinecomplete', function(polyline) {
+    const path = polyline.getPath().getArray();
+    if (path.length < 2) { polyline.setMap(null); return; }
+    const lengthM = google.maps.geometry.spherical.computeLength(path);
+    const lengthFt = Math.round(lengthM * 3.28084);
+    const midPt = path[Math.floor(path.length / 2)];
+    const label = new google.maps.Marker({
+      position: midPt, map: map, clickable: false,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+      label: { text: lengthFt + ' ft', color: 'white', fontSize: '13px', fontWeight: '700', fontFamily: 'Barlow, sans-serif' },
+      zIndex: 15
+    });
+    fencePolylines.push({ polyline, label, path: [...path], lengthFt });
+    drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
+    updateSidebar();
+    document.getElementById('instructions').textContent = 'Run saved! Draw another, or switch to Place Gate.';
+  });
+
+  // Gate click listener (only active in gate mode)
+  map.addListener('click', function(e) {
+    if (activeTool !== 'gate') return;
+    pendingGateLatLng = e.latLng;
+    showGatePopup(e.domEvent.clientX, e.domEvent.clientY);
+  });
+
+  // Gate popup buttons
+  document.getElementById('gate-type-select').addEventListener('change', function() {
+    const note = document.getElementById('gate-popup-note');
+    note.style.display = this.value === '0' ? 'block' : 'none';
+  });
+  document.getElementById('gate-popup-save').addEventListener('click', saveGate);
+  document.getElementById('gate-popup-cancel').addEventListener('click', hideGatePopup);
+
+  autocomplete = new google.maps.places.Autocomplete(
+    document.getElementById('address-input'),
+    { componentRestrictions: { country: 'us' }, fields: ['geometry'] }
+  );
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if (place.geometry) goToLocation(place.geometry.location);
+  });
+
+  document.getElementById('search-btn').addEventListener('click', searchAddress);
+  document.getElementById('address-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchAddress();
+  });
+  document.getElementById('tool-fence').addEventListener('click', () => setTool('fence'));
+  document.getElementById('tool-gate').addEventListener('click', () => setTool('gate'));
+  document.getElementById('tool-undo').addEventListener('click', doUndo);
+  document.getElementById('clear-btn').addEventListener('click', doClear);
+  document.getElementById('opt-height').addEventListener('change', updateSidebar);
+}
+
+function showGatePopup(clientX, clientY) {
+  const popup = document.getElementById('gate-popup');
+  const wrap = document.getElementById('map-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const note = document.getElementById('gate-popup-note');
+  note.style.display = 'none';
+  document.getElementById('gate-type-select').value = '580';
+  popup.style.display = 'block';
+  // Position near click but keep inside map
+  let x = clientX - rect.left + 10;
+  let y = clientY - rect.top + 10;
+  if (x + 230 > rect.width) x = clientX - rect.left - 240;
+  if (y + 160 > rect.height) y = clientY - rect.top - 170;
+  popup.style.left = x + 'px';
+  popup.style.top = y + 'px';
+}
+
+function hideGatePopup() {
+  document.getElementById('gate-popup').style.display = 'none';
+  pendingGateLatLng = null;
+}
+
+function saveGate() {
+  if (!pendingGateLatLng) return;
+  const select = document.getElementById('gate-type-select');
+  const typeKey = select.value;
+  const gateType = GATE_TYPES[typeKey];
+
+  const iconText = gateType.tbd ? '🚪 TBD' : '🚪 $' + gateType.price;
+
+  const marker = new google.maps.Marker({
+    position: pendingGateLatLng,
+    map: map,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 14,
+      fillColor: '#27AE60',
+      fillOpacity: 0.9,
+      strokeColor: 'white',
+      strokeWeight: 2.5
+    },
+    label: { text: '🚪', fontSize: '14px' },
+    zIndex: 25,
+    title: gateType.label
+  });
+
+  const infoMarker = new google.maps.Marker({
+    position: pendingGateLatLng,
+    map: map,
+    clickable: false,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+    label: {
+      text: gateType.label + (gateType.tbd ? ' — site visit' : ' — $' + gateType.price),
+      color: 'white', fontSize: '11px', fontWeight: '600', fontFamily: 'Barlow, sans-serif'
+    },
+    zIndex: 24
+  });
+
+  // Click marker to remove
+  marker.addListener('click', function() {
+    if (activeTool === 'gate') {
+      const idx = gateMarkers.findIndex(g => g.marker === marker);
+      if (idx !== -1) {
+        gateMarkers[idx].marker.setMap(null);
+        gateMarkers[idx].infoMarker.setMap(null);
+        gateMarkers.splice(idx, 1);
+        updateSidebar();
+      }
+    }
+  });
+
+  gateMarkers.push({ marker, infoMarker, type: gateType.label, price: gateType.price, tbd: gateType.tbd });
+  hideGatePopup();
+  updateSidebar();
+  document.getElementById('instructions').textContent = 'Gate placed! Click another spot to add more gates.';
+}
+
+function searchAddress() {
+  const addr = document.getElementById('address-input').value.trim();
+  if (!addr) return;
+  document.getElementById('map-loading').style.display = 'flex';
+  geocoder.geocode({ address: addr + ', Tucson AZ' }, (results, status) => {
+    document.getElementById('map-loading').style.display = 'none';
+    if (status === 'OK' && results[0]) goToLocation(results[0].geometry.location);
+    else alert('Address not found. Try a more specific address.');
+  });
+}
+
+function goToLocation(latLng) {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('toolbar').style.display = 'flex';
+  document.getElementById('instructions').style.display = 'block';
+  map.setCenter(latLng);
+  map.setZoom(19);
+  drawingManager.setMap(map);
+  setTool('fence');
+}
+
+function setTool(tool) {
+  activeTool = tool;
+  hideGatePopup();
+  document.getElementById('tool-fence').classList.toggle('active', tool === 'fence');
+  document.getElementById('tool-gate').classList.toggle('active', tool === 'gate');
+
+  if (tool === 'fence') {
+    drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
+    document.getElementById('instructions').textContent = 'Click to place points · Double-click to finish the fence run';
+  } else {
+    drawingManager.setDrawingMode(null); // disable drawing manager in gate mode
+    document.getElementById('instructions').textContent = 'Click anywhere on the map to place a gate';
+  }
+}
+
+function doUndo() {
+  if (gateMarkers.length > 0) {
+    const last = gateMarkers.pop();
+    last.marker.setMap(null);
+    last.infoMarker.setMap(null);
+    updateSidebar();
+  } else if (fencePolylines.length > 0) {
+    const last = fencePolylines.pop();
+    last.polyline.setMap(null);
+    last.label.setMap(null);
+    updateSidebar();
+  }
+}
+
+function doClear() {
+  fencePolylines.forEach(e => { e.polyline.setMap(null); e.label.setMap(null); });
+  gateMarkers.forEach(g => { g.marker.setMap(null); g.infoMarker.setMap(null); });
+  fencePolylines = []; gateMarkers = [];
+  hideGatePopup();
+  updateSidebar();
+}
+
+function updateSidebar() {
+  const totalFt = fencePolylines.reduce((s, e) => s + e.lengthFt, 0);
+  const gateCount = gateMarkers.length;
+  const gatePriceTotal = gateMarkers.reduce((s, g) => s + g.price, 0);
+  const hasTbd = gateMarkers.some(g => g.tbd);
+
+  document.getElementById('m-runs').textContent = fencePolylines.length;
+  document.getElementById('m-fence').textContent = totalFt + ' ft';
+  document.getElementById('m-gates').textContent = gateCount;
+
+  const hMod = parseFloat(document.getElementById('opt-height').value);
+  const rate = Math.round(FENCE_PER_FT * hMod);
+  const fenceCost = totalFt * rate;
+  const total = fenceCost + gatePriceTotal;
+
+  const list = document.getElementById('seg-list');
+  list.innerHTML = '';
+  fencePolylines.forEach((e, i) => {
+    const el = document.createElement('div');
+    el.className = 'seg-item';
+    el.innerHTML = `<span class="seg-name">Run ${i+1}</span><span class="seg-ft">${e.lengthFt} ft</span><button class="seg-del" data-type="fence" data-i="${i}">×</button>`;
+    list.appendChild(el);
+  });
+  gateMarkers.forEach((g, i) => {
+    const el = document.createElement('div');
+    el.className = 'seg-item gate-item';
+    el.innerHTML = `<span class="seg-name">🚪 ${g.type}</span><span class="seg-ft">${g.tbd ? 'TBD' : '$' + g.price}</span><button class="seg-del" data-type="gate" data-i="${i}">×</button>`;
+    list.appendChild(el);
+  });
+  list.querySelectorAll('.seg-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.i);
+      if (btn.dataset.type === 'fence') {
+        const removed = fencePolylines.splice(idx, 1)[0];
+        if (removed) { removed.polyline.setMap(null); removed.label.setMap(null); }
+      } else {
+        const removed = gateMarkers.splice(idx, 1)[0];
+        if (removed) { removed.marker.setMap(null); removed.infoMarker.setMap(null); }
+      }
+      updateSidebar();
+    });
+  });
+
+  const hasData = totalFt > 0 || gateCount > 0;
+  document.getElementById('clear-btn').style.display = hasData ? 'block' : 'none';
+  document.getElementById('empty-quote').style.display = hasData ? 'none' : 'block';
+  document.getElementById('q-rows').style.display = hasData ? 'block' : 'none';
+
+  if (hasData) {
+    document.getElementById('q-ft').textContent = totalFt;
+    document.getElementById('q-rate').textContent = rate;
+    document.getElementById('q-fence-cost').textContent = '$' + fenceCost.toLocaleString();
+    const gr = document.getElementById('q-gate-row');
+    gr.style.display = gateCount > 0 ? 'flex' : 'none';
+    document.getElementById('q-gates').textContent = gateCount + (hasTbd ? ' (incl. TBD)' : '');
+    document.getElementById('q-gate-cost').textContent = hasTbd ? '$' + gatePriceTotal.toLocaleString() + ' + TBD' : '$' + gatePriceTotal.toLocaleString();
+    document.getElementById('q-total').textContent = hasTbd ? '$' + total.toLocaleString() + ' + TBD' : '$' + total.toLocaleString();
+  }
+}
+
+function handleCTA() {
+  const totalFt = fencePolylines.reduce((s, e) => s + e.lengthFt, 0);
+  const gateCount = gateMarkers.length;
+  const addr = document.getElementById('address-input').value;
+  const hMod = parseFloat(document.getElementById('opt-height').value);
+  const rate = Math.round(FENCE_PER_FT * hMod);
+  const gatePriceTotal = gateMarkers.reduce((s, g) => s + g.price, 0);
+  const total = (totalFt * rate) + gatePriceTotal;
+  const gateDetails = gateMarkers.map((g, i) => `  Gate ${i+1}: ${g.type}${g.tbd ? ' (site visit required)' : ' — $' + g.price}`).join('\n');
+  const subject = encodeURIComponent('Fence Estimate Request — ' + addr);
+  const body = encodeURIComponent(
+    'Hi, I used the online estimator and would like a real quote.\n\n' +
+    'Address: ' + addr + '\n' +
+    'Fence: ' + totalFt + ' linear ft\n' +
+    'Height: ' + (hMod === 1 ? '6ft standard' : hMod === 1.17 ? '7ft' : '8ft') + '\n' +
+    (gateDetails ? 'Gates:\n' + gateDetails + '\n' : '') +
+    'Estimated total: $' + total.toLocaleString() + (gateMarkers.some(g=>g.tbd) ? ' + vehicle gate TBD' : '') + '\n\n' +
+    'Please contact me to confirm.'
+  );
+  window.location.href = 'mailto:strapsteelfence@gmail.com?subject=' + subject + '&body=' + body;
+}
+</script>
+
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD17iQYEE6q2rdVyFcgBonEYafU-hbZ9y4&libraries=places,geometry,drawing&callback=initMap">
+</script>
+
+</body>
+</html>
