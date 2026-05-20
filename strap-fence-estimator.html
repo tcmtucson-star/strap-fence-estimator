@@ -418,13 +418,13 @@
     /* Toolbar smaller, horizontal on mobile */
     #toolbar {
       flex-direction: row !important;
-      top: 8px; left: 8px; right: 8px;
-      gap: 4px;
+      top: 8px; left: 4px; right: 4px;
+      gap: 3px;
     }
-    .tool-btn { padding: 7px 10px; font-size: 12px; flex: 1; justify-content: center; }
-    .tool-btn .tool-icon { font-size: 14px; }
+    .tool-btn { padding: 6px 4px; font-size: 11px; flex: 1; justify-content: center; gap: 4px; }
+    .tool-btn .tool-icon { font-size: 13px; }
+    .tool-btn-small { padding: 6px 4px; font-size: 11px; flex: 1; justify-content: center; background: white; border: 1.5px solid var(--border); border-radius: 4px; display: flex; align-items: center; box-shadow: var(--shadow); }
     .tool-divider { display: none; }
-    .tool-btn-small { padding: 6px 8px; font-size: 11px; }
 
     /* Instructions wrap on mobile */
     #instructions {
@@ -588,11 +588,11 @@
     <div id="map-loading"><div class="spinner"></div> Loading satellite view...</div>
     <div id="map"></div>
     <div id="toolbar">
-      <button class="tool-btn active" id="tool-fence"><span class="tool-icon">🔲</span> Draw Fence</button>
-      <button class="tool-btn" id="tool-gate"><span class="tool-icon">🚪</span> Place Gate</button>
+      <button class="tool-btn active" id="tool-fence"><span class="tool-icon">🔲</span> Fence</button>
+      <button class="tool-btn" id="tool-gate"><span class="tool-icon">🚪</span> Gate</button>
       <div class="tool-divider"></div>
       <button class="tool-btn-small" id="tool-undo">↩ Undo</button>
-      <button class="tool-btn-small" id="tool-move" style="background:var(--steel);color:white;border-color:var(--steel);">✋ Move Map</button>
+      <button class="tool-btn" id="tool-move" style="background:var(--steel);color:white;border-color:var(--steel);">✋ Move</button>
 
     </div>
     <div id="gate-popup">
@@ -868,15 +868,15 @@ function toggleMoveMode() {
     drawingManager.setDrawingMode(null);
     btn.style.background = '#E8703A';
     btn.style.borderColor = '#E8703A';
-    btn.textContent = '✏️ Draw Mode';
-    document.getElementById('instructions').textContent = 'Move mode — drag to pan · Tap Draw Mode to resume drawing';
+    btn.textContent = '✏️ Draw';
+    document.getElementById('instructions').textContent = 'Move mode — drag to pan · Tap Draw to resume';
   } else {
     // Draw mode — restore current tool
     map.setOptions({ gestureHandling: 'none', draggable: false });
     btn.style.background = 'var(--steel)';
     btn.style.borderColor = 'var(--steel)';
     btn.style.color = 'white';
-    btn.textContent = '✋ Move Map';
+    btn.textContent = '✋ Move';
     setTool(activeTool);
   }
 }
