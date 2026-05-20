@@ -464,6 +464,89 @@
     }
   }
 
+  /* CONTACT FORM MODAL */
+  #contact-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  #contact-modal.open { display: flex; }
+  #contact-form-wrap {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+  #contact-form-header {
+    background: var(--steel);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+  }
+  #contact-form-header h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 0.04em; }
+  #contact-form-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  #contact-form-body { padding: 20px; }
+  .cf-estimate-summary {
+    background: var(--cream);
+    border-left: 3px solid var(--rust);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .cf-estimate-summary strong { color: var(--text); font-size: 15px; display: block; margin-bottom: 4px; }
+  .cf-field { margin-bottom: 14px; }
+  .cf-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .cf-field input, .cf-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--cream);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .cf-field input:focus, .cf-field textarea:focus { border-color: var(--rust); background: white; }
+  .cf-field textarea { resize: vertical; min-height: 80px; }
+  .cf-row { display: flex; gap: 10px; }
+  .cf-row .cf-field { flex: 1; }
+  #cf-submit {
+    width: 100%;
+    padding: 13px;
+    background: var(--rust);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 4px;
+  }
+  #cf-submit:hover { background: var(--rust-dark); }
+  #cf-success { display: none; text-align: center; padding: 30px 20px; }
+  #cf-success .cf-check { font-size: 48px; margin-bottom: 12px; }
+  #cf-success h4 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  #cf-success p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
   /* Make the whole page fill viewport height properly */
   html, body { height: 100%; overflow: hidden; }
   body { display: flex; flex-direction: column; }
@@ -597,7 +680,7 @@ function initMap() {
     disableDefaultUI: true,
     zoomControl: true,
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
-    gestureHandling: 'greedy',
+    gestureHandling: 'cooperative',
     clickableIcons: false,
   });
 
@@ -870,25 +953,126 @@ function updateSidebar() {
 function handleCTA() {
   const totalFt = fencePolylines.reduce((s, e) => s + e.lengthFt, 0);
   const gateCount = gateMarkers.length;
-  const addr = document.getElementById('address-input').value;
   const hMod = parseFloat(document.getElementById('opt-height').value);
   const rate = Math.round(FENCE_PER_FT * hMod);
   const gatePriceTotal = gateMarkers.reduce((s, g) => s + g.price, 0);
   const total = (totalFt * rate) + gatePriceTotal;
-  const gateDetails = gateMarkers.map((g, i) => `  Gate ${i+1}: ${g.type}${g.tbd ? ' (site visit required)' : ' — $' + g.price}`).join('\n');
-  const subject = encodeURIComponent('Fence Estimate Request — ' + addr);
-  const body = encodeURIComponent(
-    'Hi, I used the online estimator and would like a real quote.\n\n' +
-    'Address: ' + addr + '\n' +
-    'Fence: ' + totalFt + ' linear ft\n' +
-    'Height: ' + (hMod === 1 ? '6ft standard' : hMod === 1.17 ? '7ft' : '8ft') + '\n' +
-    (gateDetails ? 'Gates:\n' + gateDetails + '\n' : '') +
-    'Estimated total: $' + total.toLocaleString() + (gateMarkers.some(g=>g.tbd) ? ' + vehicle gate TBD' : '') + '\n\n' +
-    'Please contact me to confirm.'
-  );
-  window.location.href = 'mailto:strapsteelfence@gmail.com?subject=' + subject + '&body=' + body;
+  const hasTbd = gateMarkers.some(g => g.tbd);
+  const addr = document.getElementById('address-input').value;
+
+  // Build summary text
+  let summary = '';
+  if (totalFt > 0) summary += `${totalFt} ft of fence`;
+  if (gateCount > 0) {
+    summary += (summary ? ' · ' : '') + gateMarkers.map(g => g.type + (g.tbd ? ' (TBD)' : ' $' + g.price)).join(', ');
+  }
+  if (total > 0) summary += `\nEstimated total: $${total.toLocaleString()}` + (hasTbd ? ' + TBD' : '');
+  if (!summary) summary = 'No measurements drawn yet — we\'ll discuss details with you.';
+
+  document.getElementById('cf-summary-text').textContent = summary;
+  document.getElementById('cf-address').value = addr;
+
+  // Reset form state
+  document.getElementById('contact-form-body').style.display = 'block';
+  document.getElementById('cf-success').style.display = 'none';
+  document.getElementById('contact-modal').classList.add('open');
 }
+
+function closeContactModal() {
+  document.getElementById('contact-modal').classList.remove('open');
+}
+
+function submitContactForm() {
+  const fname = document.getElementById('cf-fname').value.trim();
+  const lname = document.getElementById('cf-lname').value.trim();
+  const phone = document.getElementById('cf-phone').value.trim();
+  const email = document.getElementById('cf-email').value.trim();
+  const addr = document.getElementById('cf-address').value.trim();
+  const notes = document.getElementById('cf-notes').value.trim();
+  const summary = document.getElementById('cf-summary-text').textContent;
+
+  if (!fname || !phone) {
+    alert('Please enter at least your first name and phone number.');
+    return;
+  }
+
+  // Build email
+  const subject = encodeURIComponent(`Quote Request — ${fname} ${lname} — ${addr || 'address not provided'}`);
+  const body = encodeURIComponent(
+    `New quote request from the online estimator:\n\n` +
+    `Name: ${fname} ${lname}\n` +
+    `Phone: ${phone}\n` +
+    `Email: ${email || 'not provided'}\n` +
+    `Address: ${addr || 'not provided'}\n\n` +
+    `ESTIMATE:\n${summary}\n\n` +
+    (notes ? `Notes: ${notes}\n` : '')
+  );
+
+  window.location.href = `mailto:strapsteelfence@gmail.com?subject=${subject}&body=${body}`;
+
+  // Show success
+  document.getElementById('contact-form-body').style.display = 'none';
+  document.getElementById('cf-success').style.display = 'block';
+}
+
+// Wire up modal events after DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('contact-form-close').addEventListener('click', closeContactModal);
+  document.getElementById('contact-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeContactModal();
+  });
+  document.getElementById('cf-submit').addEventListener('click', submitContactForm);
+});
 </script>
+
+<!-- CONTACT FORM MODAL -->
+<div id="contact-modal">
+  <div id="contact-form-wrap">
+    <div id="contact-form-header">
+      <h3>Request a Free Quote</h3>
+      <button id="contact-form-close">×</button>
+    </div>
+    <div id="contact-form-body">
+      <div class="cf-estimate-summary" id="cf-summary">
+        <strong>Your Estimate</strong>
+        <span id="cf-summary-text">Draw your fence to generate an estimate.</span>
+      </div>
+      <div class="cf-row">
+        <div class="cf-field">
+          <label>First Name *</label>
+          <input type="text" id="cf-fname" placeholder="Jane" required />
+        </div>
+        <div class="cf-field">
+          <label>Last Name *</label>
+          <input type="text" id="cf-lname" placeholder="Smith" required />
+        </div>
+      </div>
+      <div class="cf-field">
+        <label>Phone *</label>
+        <input type="tel" id="cf-phone" placeholder="520-555-1234" required />
+      </div>
+      <div class="cf-field">
+        <label>Email</label>
+        <input type="email" id="cf-email" placeholder="jane@email.com" />
+      </div>
+      <div class="cf-field">
+        <label>Property Address</label>
+        <input type="text" id="cf-address" placeholder="Auto-filled from your search" />
+      </div>
+      <div class="cf-field">
+        <label>Notes (optional)</label>
+        <textarea id="cf-notes" placeholder="Any questions or special requests..."></textarea>
+      </div>
+      <button id="cf-submit">Send My Quote Request →</button>
+      <div style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:8px;">We respond within 24 hours · No obligation</div>
+    </div>
+    <div id="cf-success">
+      <div class="cf-check">✅</div>
+      <h4>Request Sent!</h4>
+      <p>Thanks! We'll be in touch within 24 hours to confirm your quote.<br><br>Questions? Call or text us at <strong>520-222-8142</strong></p>
+    </div>
+  </div>
+</div>
 
 <script async defer
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD17iQYEE6q2rdVyFcgBonEYafU-hbZ9y4&libraries=places,geometry,drawing&callback=initMap">
