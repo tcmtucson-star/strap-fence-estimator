@@ -592,6 +592,7 @@
       <button class="tool-btn" id="tool-gate"><span class="tool-icon">🚪</span> Place Gate</button>
       <div class="tool-divider"></div>
       <button class="tool-btn-small" id="tool-undo">↩ Undo</button>
+      <button class="tool-btn-small" id="tool-move" style="background:var(--steel);color:white;border-color:var(--steel);">✋ Move Map</button>
 
     </div>
     <div id="gate-popup">
@@ -746,6 +747,7 @@ function initMap() {
   document.getElementById('tool-fence').addEventListener('click', () => setTool('fence'));
   document.getElementById('tool-gate').addEventListener('click', () => setTool('gate'));
   document.getElementById('tool-undo').addEventListener('click', doUndo);
+  document.getElementById('tool-move').addEventListener('click', toggleMoveMode);
   document.getElementById('clear-btn').addEventListener('click', doClear);
   document.getElementById('opt-height').addEventListener('change', updateSidebar);
 }
@@ -844,13 +846,39 @@ function goToLocation(latLng) {
   document.getElementById('instructions').style.display = 'block';
   map.setCenter(latLng);
   map.setZoom(19);
-  // Force map to redraw to fill container (important on mobile)
+  // Lock map gestures so taps draw instead of pan
+  map.setOptions({ gestureHandling: 'none', draggable: false });
   setTimeout(() => {
     google.maps.event.trigger(map, 'resize');
     map.setCenter(latLng);
   }, 100);
   drawingManager.setMap(map);
+  moveMode = false;
   setTool('fence');
+}
+
+let moveMode = false;
+
+function toggleMoveMode() {
+  moveMode = !moveMode;
+  const btn = document.getElementById('tool-move');
+  if (moveMode) {
+    // Move mode — one finger pans, drawing disabled
+    map.setOptions({ gestureHandling: 'greedy', draggable: true });
+    drawingManager.setDrawingMode(null);
+    btn.style.background = '#E8703A';
+    btn.style.borderColor = '#E8703A';
+    btn.textContent = '✏️ Draw Mode';
+    document.getElementById('instructions').textContent = 'Move mode — drag to pan · Tap Draw Mode to resume drawing';
+  } else {
+    // Draw mode — restore current tool
+    map.setOptions({ gestureHandling: 'none', draggable: false });
+    btn.style.background = 'var(--steel)';
+    btn.style.borderColor = 'var(--steel)';
+    btn.style.color = 'white';
+    btn.textContent = '✋ Move Map';
+    setTool(activeTool);
+  }
 }
 
 function setTool(tool) {
