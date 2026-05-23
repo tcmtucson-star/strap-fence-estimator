@@ -535,6 +535,29 @@
   }
   #se-switch-map:hover { background: var(--cream-dark); }
 
+  /* CROSSHAIR CURSOR */
+  #crosshair {
+    display: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px; height: 24px;
+    pointer-events: none;
+    z-index: 999;
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,255,255,0.9);
+    border-radius: 2px;
+  }
+  #crosshair::before { width: 2px; height: 24px; left: 11px; top: 0; }
+  #crosshair::after { width: 24px; height: 2px; top: 11px; left: 0; }
+
+  /* Force crosshair cursor on map when drawing */
+  #map-wrap.drawing-mode { cursor: crosshair !important; }
+  #map-wrap.drawing-mode * { cursor: crosshair !important; }
+
   /* CONTACT FORM MODAL */
   #contact-modal {
     display: none;
@@ -719,6 +742,7 @@
       <button class="tool-btn" id="tool-move" style="background:var(--steel);color:white;border-color:var(--steel);">✋ Move</button>
 
     </div>
+    <div id="crosshair"></div>
     <div id="gate-popup">
       <h4>🚪 Select gate type</h4>
       <select id="gate-type-select">
@@ -732,7 +756,7 @@
         <button id="gate-popup-cancel">Cancel</button>
       </div>
     </div>
-    <div id="instructions">Click on the map to start drawing a fence line</div>
+    <div id="instructions">Tap the map to place fence points · Do not drag</div>
   </div>
 
   <div id="sidebar">
@@ -960,7 +984,6 @@ function goToLocation(latLng) {
   document.getElementById('instructions').style.display = 'block';
   map.setCenter(latLng);
   map.setZoom(19);
-  // Lock map gestures so taps draw instead of pan
   map.setOptions({ gestureHandling: 'none', draggable: false });
   setTimeout(() => {
     google.maps.event.trigger(map, 'resize');
@@ -968,6 +991,7 @@ function goToLocation(latLng) {
   }, 100);
   drawingManager.setMap(map);
   moveMode = false;
+  document.getElementById('map-wrap').classList.add('drawing-mode');
   setTool('fence');
 }
 
@@ -976,21 +1000,22 @@ let moveMode = false;
 function toggleMoveMode() {
   moveMode = !moveMode;
   const btn = document.getElementById('tool-move');
+  const mapWrap = document.getElementById('map-wrap');
   if (moveMode) {
-    // Move mode — one finger pans, drawing disabled
     map.setOptions({ gestureHandling: 'greedy', draggable: true });
     drawingManager.setDrawingMode(null);
     btn.style.background = '#E8703A';
     btn.style.borderColor = '#E8703A';
     btn.textContent = '✏️ Draw';
+    mapWrap.classList.remove('drawing-mode');
     document.getElementById('instructions').textContent = 'Move mode — drag to pan · Tap Draw to resume';
   } else {
-    // Draw mode — restore current tool
     map.setOptions({ gestureHandling: 'none', draggable: false });
     btn.style.background = 'var(--steel)';
     btn.style.borderColor = 'var(--steel)';
     btn.style.color = 'white';
     btn.textContent = '✋ Move';
+    mapWrap.classList.add('drawing-mode');
     setTool(activeTool);
   }
 }
@@ -1003,7 +1028,7 @@ function setTool(tool) {
 
   if (tool === 'fence') {
     drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
-    document.getElementById('instructions').textContent = 'Click to place points · Double-click to finish the fence run';
+    document.getElementById('instructions').textContent = 'TAP each point along your fence line · Double-click to finish · Do not drag';
   } else {
     drawingManager.setDrawingMode(null); // disable drawing manager in gate mode
     document.getElementById('instructions').textContent = 'Click anywhere on the map to place a gate';
