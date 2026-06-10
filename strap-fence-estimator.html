@@ -668,7 +668,7 @@
 
 <div id="search-bar">
   <label>Your address:</label>
-  <input id="address-input" type="text" placeholder="e.g. 1234 E Speedway Blvd, Tucson, AZ" autocomplete="off" />
+  <input id="address-input" type="text" placeholder="e.g. 1234 E Speedway Blvd, Tucson, AZ" autocomplete="new-password" />
   <button id="search-btn">Load Satellite View</button>
 </div>
 
@@ -739,6 +739,7 @@
       <button class="tool-btn" id="tool-gate"><span class="tool-icon">🚪</span> Gate</button>
       <div class="tool-divider"></div>
       <button class="tool-btn-small" id="tool-undo">↩ Undo</button>
+      <button class="tool-btn" id="tool-finish" style="background:var(--rust);color:white;border-color:var(--rust);">✓ Finish</button>
       <button class="tool-btn" id="tool-move" style="background:var(--steel);color:white;border-color:var(--steel);">✋ Move</button>
 
     </div>
@@ -802,11 +803,20 @@ const GATE_TYPES = {
   '0':   { label: 'Vehicle gate', price: 0, tbd: true }
 };
 
-let map, geocoder, autocomplete, drawingManager;
+let map, geocoder, autocomplete;
 let fencePolylines = [];
-let gateMarkers = []; // [{marker, infoMarker, type, price, label}]
+let gateMarkers = [];
 let activeTool = 'fence';
 let pendingGateLatLng = null;
+
+// Drawing state
+let isDrawing = false;
+let currentPath = [];
+let currentPolyline = null;
+let currentDotMarkers = [];
+let hoverPolyline = null;
+let mapClickListener = null;
+let mapMoveListener = null;
 
 function initMap() {
   geocoder = new google.maps.Geocoder();
@@ -821,44 +831,17 @@ function initMap() {
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
     gestureHandling: 'cooperative',
     clickableIcons: false,
+    disableDoubleClickZoom: true,
   });
 
-  drawingManager = new google.maps.drawing.DrawingManager({
-    drawingMode: google.maps.drawing.OverlayType.POLYLINE,
-    drawingControl: false,
-    polylineOptions: {
-      strokeColor: '#E8703A',
-      strokeWeight: 4,
-      strokeOpacity: 0.95,
-      geodesic: true,
-      clickable: false,
-      editable: false,
-    }
-  });
-
-  drawingManager.addListener('polylinecomplete', function(polyline) {
-    const path = polyline.getPath().getArray();
-    if (path.length < 2) { polyline.setMap(null); return; }
-    const lengthM = google.maps.geometry.spherical.computeLength(path);
-    const lengthFt = Math.round(lengthM * 3.28084);
-    const midPt = path[Math.floor(path.length / 2)];
-    const label = new google.maps.Marker({
-      position: midPt, map: map, clickable: false,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
-      label: { text: lengthFt + ' ft', color: 'white', fontSize: '13px', fontWeight: '700', fontFamily: 'Barlow, sans-serif' },
-      zIndex: 15
-    });
-    fencePolylines.push({ polyline, label, path: [...path], lengthFt });
-    drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
-    updateSidebar();
-    document.getElementById('instructions').textContent = 'Run saved! Draw another, or switch to Place Gate.';
-  });
-
-  // Gate click listener (only active in gate mode)
+  // Gate click listener
   map.addListener('click', function(e) {
-    if (activeTool !== 'gate') return;
-    pendingGateLatLng = e.latLng;
-    showGatePopup(e.domEvent.clientX, e.domEvent.clientY);
+    if (activeTool === 'gate') {
+      pendingGateLatLng = e.latLng;
+      const x = e.domEvent ? e.domEvent.clientX : window.innerWidth / 2;
+      const y = e.domEvent ? e.domEvent.clientY : window.innerHeight / 2;
+      showGatePopup(x, y);
+    }
   });
 
   // Gate popup buttons
@@ -871,11 +854,14 @@ function initMap() {
 
   autocomplete = new google.maps.places.Autocomplete(
     document.getElementById('address-input'),
-    { componentRestrictions: { country: 'us' }, fields: ['geometry'] }
+    { componentRestrictions: { country: 'us' }, fields: ['geometry', 'formatted_address'], types: ['address'] }
   );
   autocomplete.addListener('place_changed', () => {
     const place = autocomplete.getPlace();
-    if (place.geometry) goToLocation(place.geometry.location);
+    if (place.geometry) {
+      document.getElementById('address-input').value = place.formatted_address || document.getElementById('address-input').value;
+      goToLocation(place.geometry.location);
+    }
   });
 
   document.getElementById('search-btn').addEventListener('click', searchAddress);
@@ -886,6 +872,10 @@ function initMap() {
   document.getElementById('tool-gate').addEventListener('click', () => setTool('gate'));
   document.getElementById('tool-undo').addEventListener('click', doUndo);
   document.getElementById('tool-move').addEventListener('click', toggleMoveMode);
+  document.getElementById('tool-finish').addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    finishFenceLine();
+  });
   document.getElementById('clear-btn').addEventListener('click', doClear);
   document.getElementById('opt-height').addEventListener('change', updateSidebar);
 }
@@ -989,10 +979,10 @@ function goToLocation(latLng) {
     google.maps.event.trigger(map, 'resize');
     map.setCenter(latLng);
   }, 100);
-  drawingManager.setMap(map);
   moveMode = false;
   document.getElementById('map-wrap').classList.add('drawing-mode');
   setTool('fence');
+  startFenceDrawing();
 }
 
 let moveMode = false;
@@ -1003,7 +993,7 @@ function toggleMoveMode() {
   const mapWrap = document.getElementById('map-wrap');
   if (moveMode) {
     map.setOptions({ gestureHandling: 'greedy', draggable: true });
-    drawingManager.setDrawingMode(null);
+    stopFenceDrawing();
     btn.style.background = '#E8703A';
     btn.style.borderColor = '#E8703A';
     btn.textContent = '✏️ Draw';
@@ -1027,15 +1017,25 @@ function setTool(tool) {
   document.getElementById('tool-gate').classList.toggle('active', tool === 'gate');
 
   if (tool === 'fence') {
-    drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
-    document.getElementById('instructions').textContent = 'TAP each point along your fence line · Double-click to finish · Do not drag';
+    startFenceDrawing();
+    document.getElementById('instructions').textContent = 'TAP each point along your fence line · Press ✓ Finish Line to save · Do not drag';
   } else {
-    drawingManager.setDrawingMode(null); // disable drawing manager in gate mode
-    document.getElementById('instructions').textContent = 'Click anywhere on the map to place a gate';
+    stopFenceDrawing();
+    document.getElementById('instructions').textContent = 'TAP anywhere on the map to place a gate';
   }
 }
 
 function doUndo() {
+  // First undo in-progress points
+  if (currentPath.length > 0) {
+    currentPath.pop();
+    if (currentDotMarkers.length > 0) { currentDotMarkers.pop().setMap(null); }
+    if (currentPolyline) currentPolyline.setPath(currentPath);
+    if (currentPath.length === 0) { isDrawing = false; if (currentPolyline) { currentPolyline.setMap(null); currentPolyline = null; } }
+    document.getElementById('instructions').textContent = currentPath.length + ' point' + (currentPath.length !== 1 ? 's' : '') + ' placed · Press ✓ Finish to save';
+    return;
+  }
+  // Then undo last saved run
   if (gateMarkers.length > 0) {
     const last = gateMarkers.pop();
     last.marker.setMap(null);
@@ -1050,6 +1050,7 @@ function doUndo() {
 }
 
 function doClear() {
+  cancelFenceLine();
   fencePolylines.forEach(e => { e.polyline.setMap(null); e.label.setMap(null); });
   gateMarkers.forEach(g => { g.marker.setMap(null); g.infoMarker.setMap(null); });
   fencePolylines = []; gateMarkers = [];
@@ -1354,7 +1355,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script async defer
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD17iQYEE6q2rdVyFcgBonEYafU-hbZ9y4&libraries=places,geometry,drawing&callback=initMap">
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD17iQYEE6q2rdVyFcgBonEYafU-hbZ9y4&libraries=places,geometry&callback=initMap">
 </script>
 
 </body>
