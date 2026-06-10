@@ -555,9 +555,13 @@
   #crosshair::after { width: 24px; height: 2px; top: 11px; left: 0; }
 
   /* Force crosshair cursor on map when drawing */
-  #map-wrap.drawing-mode { cursor: crosshair !important; }
-  #map-wrap.drawing-mode > #map { cursor: crosshair !important; }
-  #map-wrap.drawing-mode div { cursor: crosshair !important; }
+  #map-wrap.drawing-mode,
+  #map-wrap.drawing-mode *,
+  #map-wrap.drawing-mode div,
+  #map-wrap.drawing-mode canvas,
+  #map-wrap.drawing-mode img {
+    cursor: crosshair !important;
+  }
 
   /* CONTACT FORM MODAL */
   #contact-modal {
@@ -1037,6 +1041,7 @@ function goToLocation(latLng) {
   }, 100);
   moveMode = false;
   document.getElementById('map-wrap').classList.add('drawing-mode');
+  map.setOptions({ draggableCursor: 'crosshair', draggingCursor: 'crosshair' });
   setTool('fence');
   startFenceDrawing();
 }
@@ -1048,15 +1053,15 @@ function toggleMoveMode() {
   const btn = document.getElementById('tool-move');
   const mapWrap = document.getElementById('map-wrap');
   if (moveMode) {
-    map.setOptions({ gestureHandling: 'greedy', draggable: true });
+    map.setOptions({ gestureHandling: 'greedy', draggable: true, draggableCursor: 'grab', draggingCursor: 'grabbing' });
     stopFenceDrawing();
     btn.style.background = '#E8703A';
     btn.style.borderColor = '#E8703A';
     btn.textContent = '✏️ Draw';
     mapWrap.classList.remove('drawing-mode');
-    document.getElementById('instructions').textContent = 'Move mode — drag to pan · Tap Draw to resume';
+    document.getElementById('instructions').textContent = 'Move mode — drag to pan · Click Draw to resume';
   } else {
-    map.setOptions({ gestureHandling: 'cooperative', draggable: false });
+    map.setOptions({ gestureHandling: 'cooperative', draggable: false, draggableCursor: 'crosshair', draggingCursor: 'crosshair' });
     btn.style.background = 'var(--steel)';
     btn.style.borderColor = 'var(--steel)';
     btn.style.color = 'white';
