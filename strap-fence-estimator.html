@@ -557,6 +557,7 @@
   /* Force crosshair cursor on map when drawing */
   #map-wrap.drawing-mode { cursor: crosshair !important; }
   #map-wrap.drawing-mode > #map { cursor: crosshair !important; }
+  #map-wrap.drawing-mode div { cursor: crosshair !important; }
 
   /* CONTACT FORM MODAL */
   #contact-modal {
@@ -1021,7 +1022,7 @@ function goToLocation(latLng) {
   document.getElementById('instructions').style.display = 'block';
   map.setCenter(latLng);
   map.setZoom(19);
-  map.setOptions({ gestureHandling: 'cooperative', draggable: true, scrollwheel: true });
+  map.setOptions({ gestureHandling: 'cooperative', draggable: false, scrollwheel: true });
   setTimeout(() => {
     google.maps.event.trigger(map, 'resize');
     map.setCenter(latLng);
@@ -1047,7 +1048,7 @@ function toggleMoveMode() {
     mapWrap.classList.remove('drawing-mode');
     document.getElementById('instructions').textContent = 'Move mode — drag to pan · Tap Draw to resume';
   } else {
-    map.setOptions({ gestureHandling: 'none', draggable: false });
+    map.setOptions({ gestureHandling: 'cooperative', draggable: false });
     btn.style.background = 'var(--steel)';
     btn.style.borderColor = 'var(--steel)';
     btn.style.color = 'white';
