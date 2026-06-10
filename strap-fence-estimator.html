@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0060)file:///Users/dantaylor/Downloads/strap-fence-estimator.html -->
+<!-- saved from url=(0062)file:///Users/dantaylor/Downloads/strap-fence-estimator_2.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style>.gm-err-container{height:100%;width:100%;display:table;background-color:#e8eaed;position:relative;left:0;top:0}.gm-err-content{border-radius:1px;padding-top:0;padding-left:10%;padding-right:10%;position:static;vertical-align:middle;display:table-cell}.gm-err-content a{color:#3c4043}.gm-err-icon{text-align:center}.gm-err-title{margin:5px;margin-bottom:20px;color:#3c4043;font-family:Roboto,Arial,sans-serif;text-align:center;font-size:24px}.gm-err-message{margin:5px;color:#3c4043;font-family:Roboto,Arial,sans-serif;text-align:center;font-size:12px}.gm-err-autocomplete{padding-left:20px;background-repeat:no-repeat;-webkit-background-size:15px 15px;background-size:15px 15px}sentinel{}
 </style><style>.gm-style-moc{background-color:rgba(0,0,0,.59);pointer-events:none;text-align:center;-webkit-transition:opacity ease-in-out;transition:opacity ease-in-out}.gm-style-mot{color:white;font-family:Roboto,Arial,sans-serif;font-size:22px;margin:0;position:relative;top:50%;transform:translateY(-50%);-webkit-transform:translateY(-50%);-ms-transform:translateY(-50%)}sentinel{}
 </style><style>.gm-style img{max-width: none;}.gm-style {font: 400 11px Roboto, Arial, sans-serif; text-decoration: none;}</style><style>.pac-container{background-color:#fff;position:absolute!important;z-index:1000;border-radius:2px;border-top:1px solid #d9d9d9;font-family:Arial,sans-serif;-webkit-box-shadow:0 2px 6px rgba(0,0,0,.3);box-shadow:0 2px 6px rgba(0,0,0,.3);-webkit-box-sizing:border-box;box-sizing:border-box;overflow:hidden}.pac-logo:after{content:"";padding:1px 1px 1px 0;height:18px;-webkit-box-sizing:border-box;box-sizing:border-box;text-align:right;display:block;background-image:url(https://maps.gstatic.com/mapfiles/api-3/images/powered-by-google-on-white3.png);background-position:100%;background-repeat:no-repeat;-webkit-background-size:120px 14px;background-size:120px 14px}.hdpi.pac-logo:after{background-image:url(https://maps.gstatic.com/mapfiles/api-3/images/powered-by-google-on-white3_hdpi.png)}.pac-item{cursor:default;padding:0 4px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;line-height:30px;text-align:left;border-top:1px solid #e6e6e6;font-size:11px;color:#515151}.pac-item:hover{background-color:#fafafa}.pac-item-selected,.pac-item-selected:hover{background-color:#ebf2fe}.pac-matched{font-weight:700}.pac-item-query{font-size:13px;padding-right:3px;color:#000}.pac-icon{width:15px;height:20px;margin-right:7px;margin-top:6px;display:inline-block;vertical-align:top;background-image:url(https://maps.gstatic.com/mapfiles/api-3/images/autocomplete-icons.png);-webkit-background-size:34px 34px;background-size:34px}.hdpi .pac-icon{background-image:url(https://maps.gstatic.com/mapfiles/api-3/images/autocomplete-icons_hdpi.png)}.pac-icon-search{background-position:-1px -1px}.pac-item-selected .pac-icon-search{background-position:-18px -1px}.pac-icon-marker{background-position:-1px -161px}.pac-item-selected .pac-icon-marker{background-position:-18px -161px}.pac-placeholder{color:gray}sentinel{}
@@ -559,7 +559,7 @@
 
   /* Force crosshair cursor on map when drawing */
   #map-wrap.drawing-mode { cursor: crosshair !important; }
-  #map-wrap.drawing-mode * { cursor: crosshair !important; }
+  #map-wrap.drawing-mode > #map { cursor: crosshair !important; }
 
   /* CONTACT FORM MODAL */
   #contact-modal {
@@ -839,6 +839,7 @@ function initMap() {
 
   // Single map click listener handles both fence and gate
   map.addListener('click', function(e) {
+    console.log('Map clicked! activeTool:', activeTool, 'moveMode:', moveMode, 'latLng:', e.latLng.toString());
     if (activeTool === 'gate') {
       pendingGateLatLng = e.latLng;
       const x = e.domEvent ? e.domEvent.clientX : window.innerWidth / 2;
@@ -1023,7 +1024,7 @@ function goToLocation(latLng) {
   document.getElementById('instructions').style.display = 'block';
   map.setCenter(latLng);
   map.setZoom(19);
-  map.setOptions({ gestureHandling: 'none', draggable: false });
+  map.setOptions({ gestureHandling: 'cooperative', draggable: true, scrollwheel: true });
   setTimeout(() => {
     google.maps.event.trigger(map, 'resize');
     map.setCenter(latLng);
