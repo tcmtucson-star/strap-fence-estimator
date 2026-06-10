@@ -879,6 +879,10 @@ function initMap() {
     }
   });
 
+  map.addListener('mouseout', function() {
+    if (hoverPolyline) { hoverPolyline.setMap(null); hoverPolyline = null; }
+  });
+
   map.addListener('mousemove', function(e) {
     if (activeTool !== 'fence' || !isDrawing || currentPath.length === 0 || moveMode) return;
     const pts = [...currentPath, e.latLng];
@@ -920,6 +924,10 @@ function initMap() {
   document.getElementById('tool-gate').addEventListener('click', () => setTool('gate'));
   document.getElementById('tool-undo').addEventListener('click', doUndo);
   document.getElementById('tool-move').addEventListener('click', toggleMoveMode);
+  document.getElementById('toolbar').addEventListener('mouseenter', function() {
+    if (hoverPolyline) { hoverPolyline.setMap(null); hoverPolyline = null; }
+  });
+
   document.getElementById('tool-finish').addEventListener('mousedown', function(e) {
     e.preventDefault();
     finishFenceLine();
